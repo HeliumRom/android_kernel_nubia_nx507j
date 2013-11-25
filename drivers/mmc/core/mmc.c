@@ -58,6 +58,7 @@ static const unsigned int tacc_mant[] = {
 		__res & __mask;						\
 	})
 
+<<<<<<< HEAD
 static const struct mmc_fixup mmc_fixups[] = {
 	/*
 	 * Certain Hynix eMMC 4.41 cards might get broken when HPI feature
@@ -83,6 +84,15 @@ static const struct mmc_fixup mmc_fixups[] = {
 
 	END_FIXUP
 };
+=======
+#ifdef CONFIG_ASYNC_FSYNC
+static unsigned int perf_degr;
+int emmc_perf_degr(void)
+{
+	return perf_degr;
+}
+#endif
+>>>>>>> 481497d... Asynchronous Fsync: initial extraction of Async Fsync from HTC
 
 /*
  * Given the decoded CSD structure, decode the raw CID to our CID structure.
