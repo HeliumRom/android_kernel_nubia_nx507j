@@ -34,6 +34,7 @@
 #include <max17050_battery.h>
 #endif
 
+<<<<<<< HEAD
 #ifdef CONFIG_SLIMPORT_FAST_CHARGE
 #include "../drivers/video/msm/mdss/slimport_anx7808/slimport.h"
 #endif
@@ -42,6 +43,57 @@
 #ifdef CONFIG_ZTEMT_HW_VERSION_NX601J
 #include <ztemt_hw_version.h>
 #endif
+=======
+#ifdef CONFIG_FORCE_FAST_CHARGE
+#include <linux/fastchg.h>
+#endif
+
+/* Register definitions */
+#define INPUT_SRC_CONT_REG              0X00
+#define PWR_ON_CONF_REG                 0X01
+#define CHARGE_CUR_CONT_REG             0X02
+#define PRE_CHARGE_TERM_CUR_REG         0X03
+#define CHARGE_VOLT_CONT_REG            0X04
+#define CHARGE_TERM_TIMER_CONT_REG      0X05
+#define IR_COMP_THERM_CONT_REG          0X06
+#define MISC_OPERATION_CONT_REG         0X07
+#define SYSTEM_STATUS_REG               0X08
+#define FAULT_REG                       0X09
+#define VENDOR_PART_REV_STATUS_REG      0X0A
+
+#define EN_HIZ_MASK                0x80
+#define RESET_REGISTER_MASK        0x80
+#define CHG_CONFIG_MASK            0x30
+#define EN_CHG_MASK                0x10
+#define PG_STAT_MASK               0x04
+#define OTG_EN_MASK                0x20
+#define VBUS_STAT_MASK             0xC0
+#define PRE_CHARGE_MASK            0x10
+#define FAST_CHARGE_MASK           0x20
+#define CHARGING_MASK (PRE_CHARGE_MASK | FAST_CHARGE_MASK)
+#define CHG_DONE_MASK              0x30
+#define INPUT_CURRENT_LIMIT_MASK   0x07
+#define INPUT_VOLTAGE_LIMIT_MASK   0x78
+#define SYSTEM_MIN_VOLTAGE_MASK    0x0E
+#define PRECHG_CURRENT_MASK        0xF0
+#define TERM_CURRENT_MASK          0x0F
+#define CHG_VOLTAGE_LIMIT_MASK     0xFC
+#define CHG_CURRENT_LIMIT_MASK     0xFC
+#define EN_CHG_TERM_MASK           0x80
+#define EN_CHG_TIMER_MASK          0x08
+#define I2C_TIMER_MASK             0x30
+#define CHG_TIMER_LIMIT_MASK       0x06
+#define IR_COMP_R_MASK             0xE0
+#define IR_COMP_VCLAMP_MASK        0x1C
+#define THERM_REG_MASK             0x03
+#define BOOST_LIM_MASK             0x01
+#define VRECHG_MASK                0x01
+
+enum rechg_thres{
+	VRECHG_100MV = 0,
+	VRECHG_300MV,
+};
+>>>>>>> b4f30fa... fastcharge: Initial Nexus 5 adaptation [Squashed]
 
 #define DRIVER_VERSION			"1.0.0"
 
@@ -321,12 +373,136 @@ static int	bq24192_set_chg_iusb(struct bq24192_chg_chip *chip, enum input_curren
 {
 	int rc;
 	u8 temp;
+<<<<<<< HEAD
 	
 	temp = iusb;
 	rc = bq24192_masked_write(chip,BQ24192_REG_INPUT_LIMIT,BQ_LIMIT_I_MASK,temp);
 	if (rc) {
 		pr_err("%s i2c r/w failed: rc=%d\n", __func__, rc);
 		return rc;
+=======
+#ifdef CONFIG_FORCE_FAST_CHARGE
+	int custom_ma = ma;
+#endif
+
+	if (ma < INPUT_CURRENT_LIMIT_MIN_MA
+			|| ma > INPUT_CURRENT_LIMIT_MAX_MA) {
+		pr_err("bad mA=%d asked to set\n", ma);
+		return -EINVAL;
+	}
+
+	for (i = ARRAY_SIZE(icl_ma_table) - 1; i >= 0; i--) {
+		if (icl_ma_table[i].icl_ma == ma)
+			break;
+	}
+
+	if (i < 0) {
+		pr_err("can't find %d in icl_ma_table. Use min.\n", ma);
+		i = 0;
+	}
+
+#ifdef CONFIG_FORCE_FAST_CHARGE
+	if (force_fast_charge == 1) {
+		i = 4;
+		custom_ma = FAST_CHARGE_1200;
+	} else if (force_fast_charge == 2) {
+		switch (fast_charge_level) {
+			case FAST_CHARGE_500:
+				i = 2;
+				custom_ma = FAST_CHARGE_500;
+				break;
+			case FAST_CHARGE_900:
+				i = 3;
+				custom_ma = FAST_CHARGE_900;
+				break;
+			case FAST_CHARGE_1200:
+				i = 4;
+				custom_ma = FAST_CHARGE_1200;
+				break;
+			case FAST_CHARGE_1500:
+				i = 5;
+				custom_ma = FAST_CHARGE_1500;
+				break;
+			case FAST_CHARGE_2000:
+				i = 6;
+				custom_ma = FAST_CHARGE_2000;
+				break;
+			default:
+				break;
+		}
+
+	}
+	temp = icl_ma_table[i].value;
+#else
+	temp = icl_ma_table[i].value;
+#endif
+
+#ifdef CONFIG_FORCE_FAST_CHARGE
+	if (custom_ma > chip->max_input_i_ma) {
+		chip->saved_input_i_ma = custom_ma;
+		pr_info("reject %d mA due to therm mitigation\n", custom_ma);
+		return 0;
+	}
+
+	if (!chip->therm_mitigation)
+		chip->saved_input_i_ma = custom_ma;
+
+	chip->therm_mitigation = false;
+	pr_info("input current limit = %d setting 0x%02x\n", custom_ma, temp);
+#else
+	if (ma > chip->max_input_i_ma) {
+		chip->saved_input_i_ma = ma;
+		pr_info("reject %d mA due to therm mitigation\n", ma);
+		return 0;
+	}
+
+	if (!chip->therm_mitigation)
+		chip->saved_input_i_ma = ma;
+
+	chip->therm_mitigation = false;
+	pr_info("input current limit = %d setting 0x%02x\n", ma, temp);
+#endif
+
+	return bq24192_masked_write(chip->client, INPUT_SRC_CONT_REG,
+			INPUT_CURRENT_LIMIT_MASK, temp);
+}
+
+static int mitigate_tbl[] = {3000, 900, 500, 100};
+static void bq24192_therm_mitigation_work(struct work_struct *work)
+{
+	struct bq24192_chip *chip = container_of(work,
+				struct bq24192_chip, therm_work.work);
+	int ret;
+	int input_limit_ma;
+
+	chip->max_input_i_ma = mitigate_tbl[input_limit_idx];
+	if (chip->max_input_i_ma < chip->saved_input_i_ma) {
+		input_limit_ma = chip->max_input_i_ma;
+		chip->therm_mitigation = true;
+	} else {
+		input_limit_ma = chip->saved_input_i_ma;
+		chip->therm_mitigation = false;
+	}
+
+	ret = bq24192_set_input_i_limit(chip, input_limit_ma);
+	if (ret)
+		pr_err("failed to set input current limit as %d\n",
+					input_limit_ma);
+}
+
+static int bq24192_therm_set_input_i_limit(const char *val,
+					const struct kernel_param *kp)
+{
+	int ret;
+
+	if (!the_chip)
+		return -ENODEV;
+
+	ret = param_set_int(val, kp);
+	if (ret) {
+		pr_err("failed to set input_limit_idx\n");
+		return ret;
+>>>>>>> b4f30fa... fastcharge: Initial Nexus 5 adaptation [Squashed]
 	}
 	return 0;
 }
@@ -687,7 +863,13 @@ int  bq24192_notify_charger(enum bq_chg_type chg_type)
 }
 EXPORT_SYMBOL_GPL(bq24192_notify_charger);
 
+<<<<<<< HEAD
 int  bq24192_get_chg_status(void)
+=======
+#define WLC_INPUT_I_LIMIT_MA 900
+#define USB_MAX_IBAT_MA 2000
+static void bq24192_external_power_changed(struct power_supply *psy)
+>>>>>>> b4f30fa... fastcharge: Initial Nexus 5 adaptation [Squashed]
 {
 	int rc;
 	u8  buf;
