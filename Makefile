@@ -351,13 +351,13 @@ CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-CFLAGS_MODULE   =
-AFLAGS_MODULE   =
+KERNELFLAGS	= -O3 -DNDEBUG -munaligned-access -fgcse-lm -fgcse-sm -fsingle-precision-constant -fforce-addr -fsched-spec-load -mtune=cortex-a15 -mcpu=cortex-a15 -marm -mfpu=neon-vfpv4 -ftree-vectorize -mvectorize-with-neon-quad -funroll-loops -fpredictive-commoning -ffast-math -fgraphite-identity -floop-parallelize-all -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block -floop-flatten
+MODFLAGS	= -DMODULE $(KERNELFLAGS)
+CFLAGS_MODULE   = $(MODFLAGS)
+AFLAGS_MODULE   = $(MODFLAGS)
 LDFLAGS_MODULE  =
-CFLAGS_KERNEL	= -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr -ffast-math -fsingle-precision-constant -mtune=cortex-a15 -marm -mfpu=neon -ftree-vectorize -mvectorize-with-neon-quad \
-		  -funroll-loops -fgraphite -ftree-loop-linear -floop-interchange -floop-strip-mine -floop-block
-#CFLAGS_KERNEL	=
-AFLAGS_KERNEL	=
+CFLAGS_KERNEL	= $(KERNELFLAGS)
+AFLAGS_KERNEL	= $(KERNELFLAGS)
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
 
