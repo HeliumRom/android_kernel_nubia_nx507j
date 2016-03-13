@@ -315,9 +315,6 @@ static int mmc_read_ext_csd(struct mmc_card *card, u8 *ext_csd)
 		goto out;
 	}
 
-	/* fixup device after ext_csd revision field is updated */
-	mmc_fixup_device(card, mmc_fixups);
-
 	card->ext_csd.raw_sectors[0] = ext_csd[EXT_CSD_SEC_CNT + 0];
 	card->ext_csd.raw_sectors[1] = ext_csd[EXT_CSD_SEC_CNT + 1];
 	card->ext_csd.raw_sectors[2] = ext_csd[EXT_CSD_SEC_CNT + 2];
