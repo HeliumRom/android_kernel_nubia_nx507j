@@ -24,7 +24,6 @@
 #include "io.h"
 #include "xhci.h"
 
-<<<<<<< HEAD
 #ifdef CONFIG_ZTEMT_CHARGE_BQ24192
 #include <../../power/bq24192_charger.h>
 #endif
@@ -50,12 +49,6 @@ dev_printk(KERN_DEBUG, dev, format, ##__VA_ARGS__)
 static int max_chgr_retry_count = MAX_INVALID_CHRGR_RETRY;
 module_param(max_chgr_retry_count, int, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(max_chgr_retry_count, "Max invalid charger retry count");
-=======
-#ifdef CONFIG_FORCE_FAST_CHARGE
-#include <linux/fastchg.h>
-#endif
-
->>>>>>> b4f30fa... fastcharge: Initial Nexus 5 adaptation [Squashed]
 static void dwc3_otg_reset(struct dwc3_otg *dotg);
 
 static void dwc3_otg_notify_host_mode(struct usb_otg *otg, int host_mode);
@@ -617,31 +610,6 @@ static int dwc3_otg_set_power(struct usb_phy *phy, unsigned mA)
 			goto psy_error;
 	}
 
-<<<<<<< HEAD
-=======
-	if (saved_usb_psy)
-		dotg->psy = saved_usb_psy;
-
-#ifdef CONFIG_FORCE_FAST_CHARGE
-	if ((force_fast_charge > 0) &&
-			(fake_charge_ac == FAKE_CHARGE_AC_ENABLE)) {
-		if (dotg->charger->chg_type == DWC3_SDP_CHARGER) {
-			power_supply_set_supply_type(dotg->psy,
-					POWER_SUPPLY_TYPE_USB_DCP);
-			dotg->psy = power_supply_get_by_name("ac");
-			power_supply_set_online(dotg->psy, true);
-			power_supply_set_current_limit(dotg->psy, 1000*mA);
-		} else if (dotg->charger->chg_type == DWC3_INVALID_CHARGER) {
-			power_supply_set_supply_type(dotg->psy,
-					POWER_SUPPLY_TYPE_BATTERY);
-			dotg->psy = power_supply_get_by_name("ac");
-			power_supply_set_online(dotg->psy, false);
-			power_supply_set_current_limit(dotg->psy, 0);
-		}
-	}
-#endif
-
->>>>>>> b4f30fa... fastcharge: Initial Nexus 5 adaptation [Squashed]
 	power_supply_changed(dotg->psy);
 	dotg->charger->max_power = mA;
 	return 0;
@@ -839,7 +807,6 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 					work = 1;
 					break;
 				case DWC3_SDP_CHARGER:
-<<<<<<< HEAD
 					dwc3_otg_start_peripheral(&dotg->otg,
 									1);
 					phy->state = OTG_STATE_B_PERIPHERAL;
@@ -869,29 +836,6 @@ static void dwc3_otg_sm_work(struct work_struct *w)
 						dwc3_otg_set_power(phy, 0);
 						pm_runtime_put_sync(phy->dev);
 						break;
-=======
-#ifdef CONFIG_FORCE_FAST_CHARGE
-					if (force_fast_charge > 1)
-						dwc3_otg_set_power(phy,
-							fast_charge_level);
-					else if (force_fast_charge > 0)
-						dwc3_otg_set_power(phy,
-							DWC3_IDEV_CHG_MAX);
-					else
-						dwc3_otg_set_power(phy,
-							DWC3_IDEV_CHG_MIN);
-#else
-					dwc3_otg_set_power(phy,
-							DWC3_IDEV_CHG_MIN);
-#endif
-					if (!slimport_is_connected()) {
-						dwc3_otg_start_peripheral(
-								&dotg->otg,
-								1);
-						phy->state =
-							OTG_STATE_B_PERIPHERAL;
-						work = 1;
->>>>>>> b4f30fa... fastcharge: Initial Nexus 5 adaptation [Squashed]
 					}
 					charger->start_detection(dotg->charger,
 									false);
